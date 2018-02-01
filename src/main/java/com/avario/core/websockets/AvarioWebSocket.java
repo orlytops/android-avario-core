@@ -5,6 +5,7 @@ import com.avario.core.interfaces.BootstrapListener;
 import com.avario.core.interfaces.StateChangeListener;
 import com.avario.core.interfaces.StateListener;
 import com.avario.core.models.RequestEvent;
+import com.avario.core.models.calls.ServicePost;
 import com.google.gson.Gson;
 import com.neovisionaries.ws.client.OpeningHandshakeException;
 import com.neovisionaries.ws.client.StatusLine;
@@ -65,6 +66,8 @@ public class AvarioWebSocket {
   private StateListener       stateListener;
   private BootstrapListener   bootstrapListener;
   private StateChangeListener stateChangeListener;
+
+  private int requestCount = 11;
 
   public static AvarioWebSocket getInstance() {
     if (AvarioWebSocket.instance == null) {
@@ -136,6 +139,7 @@ public class AvarioWebSocket {
           Map<String, List<String>> headers)
           throws Exception {
         Timber.d("WebSocket connected");
+        requestCount = 11;
       }
 
       @Override
@@ -186,11 +190,11 @@ public class AvarioWebSocket {
         Timber.e("Websocket Disconnected");
         Timber.e("Websocket close by server: %s", closedByServer);
         if (closedByServer) {
-          Timber.e("Webscoket client close reason: %s", serverCloseFrame.getCloseReason());
+          Timber.e("Webscoket server close reason: %s", serverCloseFrame.getCloseReason());
         } else {
-          start();
           Timber.e("Webscoket client close reason: %s", clientCloseFrame.getCloseReason());
         }
+        start();
       }
     });
     Config config = Config.getInstance();
@@ -243,6 +247,7 @@ public class AvarioWebSocket {
     } catch (WebSocketException e) {
       // Failed to establish a WebSocket connection.
       Timber.e("WebSocketException: %s", e.getMessage());
+      start();
     }
   }
 
@@ -262,7 +267,7 @@ public class AvarioWebSocket {
       webSocket.sendText(gson.toJson(requestEvent));
       break;
     }
-
+    Timber.i("Message =====> %s", messageJson.toString());
     Timber.i("ID =====> %s", messageJson.getInt(ID));
     switch (messageJson.getInt(ID)) {
     case GET_STATES_ID: {
@@ -278,11 +283,18 @@ public class AvarioWebSocket {
 
     case GET_STATE_CHANGE_ID:
       if (stateChangeListener != null) {
-        //Timber.d("State change ========> %s", messageJson.toString());
+        Timber.d("State change ========> %s", messageJson.toString());
         stateChangeListener.onResponse(messageJson);
       }
       break;
     }
+
+  }
+
+  public void postRequest(ServicePost servicePost) {
+    servicePost.setId(requestCount++);
+    Timber.i("Request =============> %s", servicePost.toJson());
+    webSocket.sendText(servicePost.toJson());
 
   }
 
