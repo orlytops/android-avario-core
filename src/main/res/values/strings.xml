@@ -1,3 +1,23 @@
 <resources>
   <string name="app_name">Avar Core</string>
+  <string name="app_url_assetroot">/local/assets</string>
+
+  <string name="setting_host">Host Domain / IP</string>
+  <string name="setting_host_hint">0.0.0.0</string>
+  <string name="setting_port">Host Port</string>
+  <string name="setting_port_hint">80</string>
+  <string name="setting_ssl">SSL</string>
+  <string name="setting_username">Username</string>
+  <string name="setting_password">Password</string>
+  <string name="setting_title">Settings</string>
+  <string name="setting_get_new_bootstrap">Get new Bootstrap</string>
+  <string name="setting_save">Save</string>
+  <string name="setting_discard">Cancel</string>
+  <string name="setting_working">Working...%1$s</string>
+  <string name="setting_toast_cleared">Cache cleared</string>
+  <string name="setting_toast_empty">Please set all the settings correctly</string>
+
+  <string name="delete_assets">Delete assets</string>
+  <string name="kiosk_mode">Kiosk Mode</string>
+  <string name="download_assets">Download Assets</string>
 </resources>
