@@ -47,6 +47,14 @@ public class ServicePost {
     this.serviceData = serviceData;
   }
 
+  public String getService() {
+    return service;
+  }
+
+  public ServiceData getServiceData() {
+    return serviceData;
+  }
+
   public String toJson() {
     Gson gson = new Gson();
    /* try {

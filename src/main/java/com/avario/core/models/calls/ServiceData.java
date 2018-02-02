@@ -14,4 +14,8 @@ public class ServiceData {
   public void setEntityId(String entityId) {
     this.entityId = entityId;
   }
+
+  public String getEntityId() {
+    return entityId;
+  }
 }

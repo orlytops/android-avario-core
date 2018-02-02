@@ -1,7 +1,10 @@
 package com.avario.core.websockets;
 
+import android.os.CountDownTimer;
+
 import com.avario.core.Config;
 import com.avario.core.interfaces.BootstrapListener;
+import com.avario.core.interfaces.ResponseListener;
 import com.avario.core.interfaces.StateChangeListener;
 import com.avario.core.interfaces.StateListener;
 import com.avario.core.models.RequestEvent;
@@ -26,6 +29,7 @@ import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -67,6 +71,8 @@ public class AvarioWebSocket {
   private BootstrapListener   bootstrapListener;
   private StateChangeListener stateChangeListener;
 
+  private List<ResponseListener> responseRequest = new ArrayList<>();
+
   private int requestCount = 11;
 
   public static AvarioWebSocket getInstance() {
@@ -93,7 +99,6 @@ public class AvarioWebSocket {
         String authType) throws CertificateException {
     }
   }};
-
 
   public AvarioWebSocket start() {
     gson = new Gson();
@@ -285,17 +290,63 @@ public class AvarioWebSocket {
       if (stateChangeListener != null) {
         Timber.d("State change ========> %s", messageJson.toString());
         stateChangeListener.onResponse(messageJson);
+
+        try {
+          String entityId = messageJson.getJSONObject("event").getJSONObject("data").getString(
+              "entity_id");
+          returnResponse(true, entityId, messageJson);
+        } catch (JSONException e) {
+          e.printStackTrace();
+        }
+
       }
       break;
     }
 
   }
 
-  public void postRequest(ServicePost servicePost) {
+  public void postRequest(ServicePost servicePost, ResponseListener responseListener) {
     servicePost.setId(requestCount++);
+    responseRequest.add(responseListener);
     Timber.i("Request =============> %s", servicePost.toJson());
     webSocket.sendText(servicePost.toJson());
+    startTimer(servicePost.getServiceData().getEntityId());
 
+  }
+
+
+  private void startTimer(final String id) {
+
+    new CountDownTimer(3000, 1000) {
+      @Override
+      public void onTick(long millisUntilFinished) {
+      }
+
+      @Override
+      public void onFinish() {
+        returnResponse(false, id, null);
+      }
+    }.start();
+  }
+
+
+  private void returnResponse(boolean isResponse, String service, JSONObject jsonObject) {
+    for (int i = 0; i < responseRequest.size(); i++) {
+
+      ResponseListener responseListener = responseRequest.get(i);
+
+      if (service.equals(responseListener.getId())) {
+        if (responseListener.getResponse() != null) {
+          if (isResponse) {
+            responseListener.getResponse().onResponse(jsonObject);
+          } else {
+            responseListener.getResponse().onError();
+          }
+        }
+        responseRequest.remove(i);
+        break;
+      }
+    }
   }
 
   //SETTERS AND GETTERS
