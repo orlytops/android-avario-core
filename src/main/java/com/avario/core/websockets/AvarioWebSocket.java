@@ -218,6 +218,7 @@ public class AvarioWebSocket {
   private void connectWebSocket() {
     try {
       webSocket.connect();
+      webSocket.setPingInterval(10000);
     } catch (OpeningHandshakeException e) {
       // A violation against the WebSocket protocol was detected
       // during the opening handshake.
@@ -330,14 +331,14 @@ public class AvarioWebSocket {
   }
 
 
-  private void returnResponse(boolean isResponse, String service, JSONObject jsonObject) {
+  private void returnResponse(boolean isSuccess, String service, JSONObject jsonObject) {
     for (int i = 0; i < responseRequest.size(); i++) {
 
       ResponseListener responseListener = responseRequest.get(i);
 
       if (service.equals(responseListener.getId())) {
         if (responseListener.getResponse() != null) {
-          if (isResponse) {
+          if (isSuccess) {
             responseListener.getResponse().onResponse(jsonObject);
           } else {
             responseListener.getResponse().onError();
