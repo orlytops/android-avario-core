@@ -310,8 +310,8 @@ public class Config {
    * Store light algo to be use when app reboots.
    *
    * @param algos ArrayList of Light.Algo class.
-   *//*
-  public void setLightAlgo(ArrayList<Light.Algo> algos) {
+   */
+  /*public void setLightAlgo(ArrayList<Light.Algo> algos) {
     String set = new Gson().toJson(algos);
     this.prefs.edit().putString(PREFKEY_LIGHT_ALGO, set).apply();
   }
