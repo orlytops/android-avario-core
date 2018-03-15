@@ -1,6 +1,7 @@
 package com.avario.core.websockets;
 
 import android.os.CountDownTimer;
+import android.util.Log;
 
 import com.avario.core.AvarioCoreConfig;
 import com.avario.core.interfaces.BootstrapListener;
@@ -281,13 +282,9 @@ public class AvarioWebSocket {
     Timber.i("Message =====> %s", messageJson.toString());
     Timber.i("ID =====> %s", messageJson.getInt(ID));
     switch (messageJson.getInt(ID)) {
-    case GET_STATES_ID: {
-      stateListener.onResponse(messageJson.getJSONArray(RESULT));
-    }
-    if (stateListener != null) {
+    case GET_STATES_ID:
+      //stateListener.onResponse(messageJson.getJSONArray(RESULT));
       break;
-    }
-
     case GET_BOOTSTRAP_ID:
       if (bootstrapListener != null) {
         bootstrapListener.onResponse(messageJson.getJSONObject(RESULT));
@@ -297,7 +294,13 @@ public class AvarioWebSocket {
     case GET_STATE_CHANGE_ID:
       if (stateChangeListener != null) {
         Timber.d("State change ========> %s", messageJson.toString());
-        stateChangeListener.onResponse(messageJson);
+        if (stateChangeListener != null) {
+          Log.d("FIRED", "=============================!!!!");
+          JSONObject payload = new JSONObject();
+          payload.put("event_data", messageJson.getJSONObject("event").getJSONObject("data"));
+          payload.put("event_type", "state_changed");
+          stateChangeListener.onResponse(payload);
+        }
 
         try {
           String entityId = messageJson.getJSONObject("event").getJSONObject("data").getString(
@@ -313,18 +316,17 @@ public class AvarioWebSocket {
 
   }
 
-  public void postRequest(ServicePost servicePost, ResponseListener responseListener) {
+  public void postRequest(ServicePost servicePost) {
     if (servicePost != null) {
       servicePost.setId(requestCount++);
-      responseRequest.add(responseListener);
-      webSocket.sendText(removeBlanks(servicePost.toJson(), servicePost));
-      Timber.i("Request =============> %s", removeBlanks(servicePost.toJson(), servicePost));
+      webSocket.sendText(removeBlanks(servicePost.toJson()));
+      Timber.i("Request =============> %s", removeBlanks(servicePost.toJson()));
       //startTimer(servicePost.getServiceData().getEntityId());
     }
 
   }
 
-  private String removeBlanks(String json, ServicePost servicePost) {
+  private String removeBlanks(String json) {
         /*Type type = new TypeToken<Map<String, Object>>() {
         }.getType();
         Map<String, Object> data = new Gson().fromJson(json, type);
@@ -345,17 +347,6 @@ public class AvarioWebSocket {
     try {
       jsonObject = new JSONObject(json);
 
-      if (servicePost.getServiceData().getAlgorithm().isEmpty() ||
-          !isMultipleEntities(servicePost.getServiceData().getEntityId())) {
-        jsonObject.getJSONObject("service_data").remove("algorithm");
-      }
-      if (servicePost.getServiceData().getBrightness() == 0) {
-        jsonObject.getJSONObject("service_data").remove("brightness");
-      }
-
-      if (servicePost.getDomain().equals("avariolight")) {
-        jsonObject.getJSONObject("service_data").remove("entity_id");
-      }
 
     } catch (JSONException e) {
       e.printStackTrace();
