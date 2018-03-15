@@ -14,7 +14,7 @@ import java.util.List;
 /**
  * Created by aeroheart-c6 on 12/01/2017.
  */
-public class Config {
+public class AvarioCoreConfig {
   public static final String TAG = "Avario/Config";
 
   private static final String PREFKEY_RES_FETCHED         = "setting__res_fetched";
@@ -35,7 +35,7 @@ public class Config {
   private static final String PREFKEY_IS_IMAGE_DOWNLOADED = "is_image_downloaded";
   private static final String PREFKEY_IS_IMAGE_LAN        = "is_image_lan";
 
-  private static Config instance = null;
+  private static AvarioCoreConfig instance = null;
 
   private Context           context;
   private SharedPreferences prefs;
@@ -54,8 +54,8 @@ public class Config {
   private boolean isImageDownloaded;
   private boolean isImageLan;
 
-  public static Config getInstance() {
-    return Config.instance;
+  public static AvarioCoreConfig getInstance() {
+    return AvarioCoreConfig.instance;
   }
 
   /**
@@ -65,13 +65,13 @@ public class Config {
    * @param context the application context
    * @return instance of the APIClient singleton
    */
-  public static Config getInstance(Context context) {
-    if (Config.instance == null) { Config.instance = new Config(context); }
+  public static AvarioCoreConfig getInstance(Context context) {
+    if (AvarioCoreConfig.instance == null) { AvarioCoreConfig.instance = new AvarioCoreConfig(context); }
 
-    return Config.instance;
+    return AvarioCoreConfig.instance;
   }
 
-  private Config(Context context) {
+  private AvarioCoreConfig(Context context) {
     super();
 
     this.context = context;

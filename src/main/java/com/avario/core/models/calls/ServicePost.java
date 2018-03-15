@@ -4,80 +4,82 @@ import com.avario.core.interfaces.ResponseListener;
 import com.google.gson.Gson;
 import com.google.gson.annotations.SerializedName;
 
+import java.util.Map;
+
 /**
  * Created by orly on 2/1/18.
  */
 
 public class ServicePost {
 
-    @SerializedName("id")
-    private int id;
+  @SerializedName("id")
+  private int id;
 
-    @SerializedName("type")
-    private String type;
+  @SerializedName("type")
+  private String type;
 
-    @SerializedName("domain")
-    private String domain;
+  @SerializedName("domain")
+  private String domain;
 
-    @SerializedName("service")
-    private String service;
+  @SerializedName("service")
+  private String service;
 
-    @SerializedName("service_data")
-    private ServiceData serviceData;
+  @SerializedName("service_data")
+  private Map<String, Object> serviceData;
 
-    private String serviceDataJson;
+  private String serviceDataJson;
 
-    private ResponseListener responseListener;
+  private ResponseListener responseListener;
 
-    public void setId(int id) {
-        this.id = id;
-    }
+  public void setId(int id) {
+    this.id = id;
+  }
 
-    public void setType(String type) {
-        this.type = type;
-    }
+  public void setType(String type) {
+    this.type = type;
+  }
 
-    public void setDomain(String domain) {
-        this.domain = domain;
-    }
+  public void setDomain(String domain) {
+    this.domain = domain;
+  }
 
-    public String getDomain() {
-        return domain;
-    }
+  public String getDomain() {
+    return domain;
+  }
 
-    public void setService(String service) {
-        this.service = service;
-    }
+  public void setService(String service) {
+    this.service = service;
+  }
 
-    public void setServiceData(ServiceData serviceData) {
-        this.serviceData = serviceData;
-    }
+  public void setServiceData(Map<String, Object> serviceData) {
+    this.serviceData = serviceData;
+  }
 
-    public String getService() {
-        return service;
-    }
+  public String getService() {
+    return service;
+  }
 
-    public ServiceData getServiceData() {
-        return serviceData;
-    }
+  public Map<String, Object> getServiceData() {
+    return serviceData;
+  }
 
-    public void setResponseListener(ResponseListener responseListener) {
-        this.responseListener = responseListener;
-    }
+  public void setResponseListener(ResponseListener responseListener) {
+    this.responseListener = responseListener;
+  }
 
-    public ResponseListener getResponseListener() {
-        return responseListener;
-    }
+  public ResponseListener getResponseListener() {
+    return responseListener;
+  }
 
-    public String toJson() {
-        Gson gson = new Gson();
+  public String toJson() {
+    Gson gson = new Gson();
        /* try {
             serviceDataJson = gson.toJson(serviceData);
         } catch (Exception e) {
             Timber.e("Error preparing jsonData");
         }*/
 
-        return gson.toJson(this);
-    }
+    return gson.toJson(this);
+  }
 }
 
