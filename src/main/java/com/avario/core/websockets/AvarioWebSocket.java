@@ -147,6 +147,7 @@ public class AvarioWebSocket {
       e.printStackTrace();
     }
 
+    webSocket.setPingInterval(5000);
     webSocket.addListener(new WebSocketAdapter() {
       @Override
       public void onConnected(WebSocket websocket,
@@ -317,7 +318,7 @@ public class AvarioWebSocket {
   }
 
   public void postRequest(ServicePost servicePost) {
-    if (servicePost != null) {
+    if (servicePost != null && webSocket != null) {
       servicePost.setId(requestCount++);
       webSocket.sendText(removeBlanks(servicePost.toJson()));
       Timber.i("Request =============> %s", removeBlanks(servicePost.toJson()));
