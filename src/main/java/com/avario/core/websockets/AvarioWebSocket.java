@@ -1,7 +1,6 @@
 package com.avario.core.websockets;
 
-import android.os.CountDownTimer;
-import android.util.Log;
+import android.os.Handler;
 
 import com.avario.core.AvarioCoreConfig;
 import com.avario.core.interfaces.BootstrapListener;
@@ -73,6 +72,8 @@ public class AvarioWebSocket {
   private StateChangeListener stateChangeListener;
   private AvarioCoreConfig    avarioCoreConfig;
 
+  private Handler  timeExpireHandler;
+  private Runnable timeExpireRunnable;
 
   private List<ResponseListener> responseRequest = new ArrayList<>();
 
@@ -283,24 +284,19 @@ public class AvarioWebSocket {
     Timber.i("Message =====> %s", messageJson.toString());
     Timber.i("ID =====> %s", messageJson.getInt(ID));
     switch (messageJson.getInt(ID)) {
-    case GET_STATES_ID:
-      //stateListener.onResponse(messageJson.getJSONArray(RESULT));
-      break;
-    case GET_BOOTSTRAP_ID:
-      if (bootstrapListener != null) {
-        bootstrapListener.onResponse(messageJson.getJSONObject(RESULT));
-      }
-      break;
-
     case GET_STATE_CHANGE_ID:
       if (stateChangeListener != null) {
         Timber.d("State change ========> %s", messageJson.toString());
         if (stateChangeListener != null) {
-          Log.d("FIRED", "=============================!!!!");
           JSONObject payload = new JSONObject();
           payload.put("event_data", messageJson.getJSONObject("event").getJSONObject("data"));
           payload.put("event_type", "state_changed");
-          stateChangeListener.onResponse(payload);
+          if (stateChangeListener != null) {
+            if (timeExpireHandler != null && timeExpireRunnable != null) {
+              timeExpireHandler.removeCallbacks(timeExpireRunnable);
+            }
+            stateChangeListener.onResponse(payload);
+          }
         }
 
         try {
@@ -317,12 +313,32 @@ public class AvarioWebSocket {
 
   }
 
-  public void postRequest(ServicePost servicePost) {
+  public void postRequest(ServicePost servicePost, JSONObject jsonObject) {
     if (servicePost != null && webSocket != null) {
       servicePost.setId(requestCount++);
       webSocket.sendText(removeBlanks(servicePost.toJson()));
       Timber.i("Request =============> %s", removeBlanks(servicePost.toJson()));
-      //startTimer(servicePost.getServiceData().getEntityId());
+
+      String entity = "";
+      if (jsonObject.has("entity_id")) {
+        try {
+          entity = jsonObject.getString("entity_id");
+        } catch (JSONException e) {
+          e.printStackTrace();
+        }
+      } else {
+        try {
+          entity = jsonObject.getString("avl_entity_id");
+        } catch (JSONException e) {
+          e.printStackTrace();
+        }
+      }
+      String str = "...";
+      String[] enityArray = entity.split("\\s*,\\s*");
+
+      for (String id : enityArray) {
+        startTimer(id);
+      }
     }
 
   }
@@ -368,7 +384,7 @@ public class AvarioWebSocket {
 
   private void startTimer(final String id) {
 
-    new CountDownTimer(3000, 1000) {
+    /*new CountDownTimer(3000, 1000) {
       @Override
       public void onTick(long millisUntilFinished) {
       }
@@ -378,6 +394,21 @@ public class AvarioWebSocket {
         //returnResponse(false, id, null);
       }
     }.start();
+*/
+    timeExpireHandler = new Handler();
+
+    timeExpireRunnable = new Runnable() {
+      @Override
+      public void run() {
+        if (stateChangeListener != null) {
+          stateChangeListener.onExpire(id);
+          start();
+        }
+      }
+    };
+
+    timeExpireHandler.postDelayed(timeExpireRunnable, 5000);
+
   }
 
 

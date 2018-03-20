@@ -10,4 +10,6 @@ public interface StateChangeListener {
 
   void onResponse(JSONObject jsonObject);
 
+  void onExpire(String entityId);
+
 }
