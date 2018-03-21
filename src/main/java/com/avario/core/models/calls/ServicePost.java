@@ -1,6 +1,6 @@
 package com.avario.core.models.calls;
 
-import com.avario.core.interfaces.ResponseListener;
+import com.avario.core.interfaces.ResponseHandler;
 import com.google.gson.Gson;
 import com.google.gson.annotations.SerializedName;
 
@@ -29,7 +29,7 @@ public class ServicePost {
 
   private String serviceDataJson;
 
-  private ResponseListener responseListener;
+  private ResponseHandler responseListener;
 
   public void setId(int id) {
     this.id = id;
@@ -63,11 +63,11 @@ public class ServicePost {
     return serviceData;
   }
 
-  public void setResponseListener(ResponseListener responseListener) {
+  public void setResponseListener(ResponseHandler responseListener) {
     this.responseListener = responseListener;
   }
 
-  public ResponseListener getResponseListener() {
+  public ResponseHandler getResponseListener() {
     return responseListener;
   }
 

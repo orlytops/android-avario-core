@@ -4,8 +4,9 @@ import android.os.Handler;
 
 import com.avario.core.AvarioCoreConfig;
 import com.avario.core.interfaces.BootstrapListener;
+import com.avario.core.interfaces.ConnectionListener;
+import com.avario.core.interfaces.ResponseHandler;
 import com.avario.core.interfaces.ResponseListener;
-import com.avario.core.interfaces.StateChangeListener;
 import com.avario.core.interfaces.StateListener;
 import com.avario.core.models.RequestEvent;
 import com.avario.core.models.calls.ServicePost;
@@ -30,6 +31,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -62,26 +64,33 @@ public class AvarioWebSocket {
   private static final String GET_STATE_CHANGE_EVENT_TYPE = "state_changed";
   private static final String GET_STATE_CHANGE_TYPE       = "subscribe_events";
 
+  public static final int MAX_RETRY = 40;
+
   private static AvarioWebSocket instance = null;
 
   private WebSocket webSocket;
   private Gson      gson;
 
-  private StateListener       stateListener;
-  private BootstrapListener   bootstrapListener;
-  private StateChangeListener stateChangeListener;
-  private AvarioCoreConfig    avarioCoreConfig;
+  private ResponseListener   responseListener;
+  private ConnectionListener connectionListener;
 
-  private Handler  timeExpireHandler;
-  private Runnable timeExpireRunnable;
+  private AvarioCoreConfig avarioCoreConfig;
 
-  private List<ResponseListener> responseRequest = new ArrayList<>();
+  private static Handler  timeExpireHandler;
+  private        Runnable timeExpireRunnable;
+
+  private List<ResponseHandler> responseHandlers = new ArrayList<>();
+  private List<String>          deviceQue        = Collections.synchronizedList(new ArrayList());
 
   private int requestCount = 50;
+  private int retry        = 0;
+
+  private boolean isConnected = false;
 
   public static AvarioWebSocket getInstance() {
     if (AvarioWebSocket.instance == null) {
       AvarioWebSocket.instance = new AvarioWebSocket();
+      timeExpireHandler = new Handler();
     }
     return AvarioWebSocket.instance;
   }
@@ -104,11 +113,10 @@ public class AvarioWebSocket {
     }
   }};
 
-  public AvarioWebSocket start() {
+  public void start() {
     gson = new Gson();
     avarioCoreConfig = AvarioCoreConfig.getInstance();
     WebSocketFactory factory = new WebSocketFactory();
-
     if (Integer.valueOf(android.os.Build.VERSION.SDK_INT) >= 9) {
       try {
         // StrictMode.setThreadPolicy(StrictMode.ThreadPolicy.LAX);
@@ -156,6 +164,11 @@ public class AvarioWebSocket {
           throws Exception {
         Timber.d("WebSocket connected");
         requestCount = 50;
+        retry = 0;
+        isConnected = true;
+        if (connectionListener != null) {
+          connectionListener.onConnected();
+        }
       }
 
       @Override
@@ -163,6 +176,7 @@ public class AvarioWebSocket {
           WebSocketException exception)
           throws Exception {
         Timber.d("WebSocket error: %s", exception.getMessage());
+        //handleError();
       }
 
       @Override
@@ -175,42 +189,48 @@ public class AvarioWebSocket {
       public void onSendError(WebSocket websocket, WebSocketException cause, WebSocketFrame frame)
           throws Exception {
         Timber.e("Send Error: %s", cause.getMessage());
+        handleError();
       }
 
       @Override
       public void onError(WebSocket websocket, WebSocketException cause) throws Exception {
         Timber.e("Error: %s", cause.getMessage());
+        handleError();
       }
 
       @Override
       public void onTextMessageError(WebSocket websocket, WebSocketException cause, byte[] data)
           throws Exception {
         Timber.e("Text message Error: %s", cause.getMessage());
+        handleError();
       }
 
       @Override
       public void onMessageError(WebSocket websocket, WebSocketException cause,
           List<WebSocketFrame> frames) throws Exception {
         Timber.e("Message Error: %s", cause.getMessage());
+        handleError();
       }
 
       @Override
       public void onUnexpectedError(WebSocket websocket, WebSocketException cause)
           throws Exception {
         Timber.e("Unexpected Error: %s", cause.getMessage());
+        handleError();
       }
 
       @Override
       public void onDisconnected(WebSocket websocket, WebSocketFrame serverCloseFrame,
           WebSocketFrame clientCloseFrame, boolean closedByServer) throws Exception {
-        Timber.e("Websocket Disconnected");
+        Timber.e("Websocket Disconnected!");
         Timber.e("Websocket close by server: %s", closedByServer);
         if (closedByServer) {
           Timber.e("Webscoket server close reason: %s", serverCloseFrame.getCloseReason());
         } else {
           Timber.e("Webscoket client close reason: %s", clientCloseFrame.getCloseReason());
         }
-        start();
+
+        handleError();
       }
     });
     webSocket.addHeader("Authorization", String.format("Basic %s", Base64.encode(String.format(
@@ -220,8 +240,15 @@ public class AvarioWebSocket {
     ))));
 
     connectWebSocket();
+  }
 
-    return this;
+  private void handleError() {
+    isConnected = false;
+    if (connectionListener != null) {
+      retry++;
+      Timber.d("Socket connect retry: " + retry);
+      connectionListener.onDisconnect(retry);
+    }
   }
 
   private void connectWebSocket() {
@@ -258,10 +285,12 @@ public class AvarioWebSocket {
           System.out.format("%s: %s\n", name, value);
         }
       }
+      Timber.e("OpeningHandshakeException: %s", e.getMessage());
+      handleError();
     } catch (WebSocketException e) {
       // Failed to establish a WebSocket connection.
       Timber.e("WebSocketException: %s", e.getMessage());
-      start();
+      handleError();
     }
   }
 
@@ -285,23 +314,26 @@ public class AvarioWebSocket {
     Timber.i("ID =====> %s", messageJson.getInt(ID));
     switch (messageJson.getInt(ID)) {
     case GET_STATE_CHANGE_ID:
-      if (stateChangeListener != null) {
+      if (responseListener != null) {
         Timber.d("State change ========> %s", messageJson.toString());
-        if (stateChangeListener != null) {
+        if (responseListener != null) {
           JSONObject payload = new JSONObject();
           payload.put("event_data", messageJson.getJSONObject("event").getJSONObject("data"));
           payload.put("event_type", "state_changed");
-          if (stateChangeListener != null) {
-            if (timeExpireHandler != null && timeExpireRunnable != null) {
-              timeExpireHandler.removeCallbacks(timeExpireRunnable);
-            }
-            stateChangeListener.onResponse(payload);
+          if (responseListener != null) {
+            responseListener.onResponse(payload);
           }
         }
 
         try {
           String entityId = messageJson.getJSONObject("event").getJSONObject("data").getString(
               "entity_id");
+          for (int i = 0; i < responseHandlers.size(); i++) {
+            if (timeExpireHandler != null && responseHandlers.get(i).getRunnable() != null) {
+              timeExpireHandler.removeCallbacks(responseHandlers.get(i).getRunnable());
+              responseHandlers.remove(i);
+            }
+          }
           //returnResponse(true, entityId, messageJson);
         } catch (JSONException e) {
           e.printStackTrace();
@@ -344,21 +376,6 @@ public class AvarioWebSocket {
   }
 
   private String removeBlanks(String json) {
-        /*Type type = new TypeToken<Map<String, Object>>() {
-        }.getType();
-        Map<String, Object> data = new Gson().fromJson(json, type);
-
-        for (Iterator<Map.Entry<String, Object>> it = data.entrySet().iterator(); it.hasNext(); ) {
-            Map.Entry<String, Object> entry = it.next();
-            if (entry.getValue() == null) {
-                it.remove();
-            } else if (entry.getValue() instanceof ArrayList) {
-                if (((ArrayList<?>) entry.getValue()).isEmpty()) {
-                    it.remove();
-                }
-            }
-        }
-        json = new GsonBuilder().setPrettyPrinting().create().toJson(data);*/
     JSONObject jsonObject = null;
 
     try {
@@ -392,30 +409,43 @@ public class AvarioWebSocket {
       @Override
       public void onFinish() {
         //returnResponse(false, id, null);
-      }
-    }.start();
-*/
-    timeExpireHandler = new Handler();
+        synchronized (deviceQue) {
+          ListIterator<String> iterator = deviceQue.listIterator();
+          while (iterator.hasNext()) {
+            String entityId = iterator.next();
+            if (entityId.equals(id)) {
+              Timber.e(id + " expired!");
+            }
+          }
+        }
 
+      }
+    }.start();*/
     timeExpireRunnable = new Runnable() {
       @Override
       public void run() {
-        if (stateChangeListener != null) {
-          stateChangeListener.onExpire(id);
+        if (responseListener != null) {
+          Timber.e(id + " expired!");
+          responseListener.onExpire(id);
           start();
         }
       }
     };
 
-    timeExpireHandler.postDelayed(timeExpireRunnable, 5000);
+    ResponseHandler responseHandler = new ResponseHandler();
+    responseHandler.setId(id);
+    responseHandler.setRunnable(timeExpireRunnable);
+    responseHandlers.add(responseHandler);
+
+    timeExpireHandler.postDelayed(timeExpireRunnable, 2000);
 
   }
 
 
   private void returnResponse(boolean isResponse, String service, JSONObject jsonObject) {
-    for (int i = 0; i < responseRequest.size(); i++) {
+    for (int i = 0; i < responseHandlers.size(); i++) {
 
-      ResponseListener responseListener = responseRequest.get(i);
+      ResponseHandler responseListener = responseHandlers.get(i);
 
       if (service.equals(responseListener.getId())) {
         if (responseListener.getResponse() != null) {
@@ -425,7 +455,7 @@ public class AvarioWebSocket {
             responseListener.getResponse().onError();
           }
         }
-        responseRequest.remove(i);
+        responseHandlers.remove(i);
         break;
       }
     }
@@ -433,7 +463,6 @@ public class AvarioWebSocket {
 
   //SETTERS AND GETTERS
   public void getStates(StateListener stateListener) {
-    this.stateListener = stateListener;
     RequestEvent requestEvent = new RequestEvent();
     requestEvent.setId(GET_STATES_ID);
     requestEvent.setType(GET_STATES_TYPE);
@@ -441,15 +470,22 @@ public class AvarioWebSocket {
   }
 
   public void getBootstrap(BootstrapListener bootstrapListener) {
-    this.bootstrapListener = bootstrapListener;
     RequestEvent requestEvent = new RequestEvent();
     requestEvent.setId(GET_BOOTSTRAP_ID);
     requestEvent.setType(GET_BOOTSTRAP_TYPE);
     //webSocket.sendText(gson.toJson(requestEvent));
   }
 
-  public void setStateChangeListener(StateChangeListener stateChangeListener) {
-    this.stateChangeListener = stateChangeListener;
+  public void setResponseListener(ResponseListener responseListener) {
+    this.responseListener = responseListener;
+  }
+
+  public void setConnectionListener(ConnectionListener connectionListener) {
+    this.connectionListener = connectionListener;
+  }
+
+  public boolean isConnected() {
+    return isConnected;
   }
 
   public WebSocket getWebSocket() {

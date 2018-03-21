@@ -17,23 +17,23 @@ import java.util.List;
 public class AvarioCoreConfig {
   public static final String TAG = "Avario/Config";
 
-  private static final String PREFKEY_RES_FETCHED         = "setting__res_fetched";
-  private static final String PREFKEY_HTTP_HOST           = "setting__http_host";
-  private static final String PREFKEY_HTTP_PORT           = "setting__http_port";
-  private static final String PREFKEY_HTTP_SSL            = "setting__http_ssl";
-  private static final String PREFKEY_USERNAME            = "setting__username";
-  private static final String PREFKEY_PASSWORD            = "setting__password";
-  private static final String PREFKEY_ASSET_ROOT          = "setting__assets";
-  private static final String PREFKEY_BOOTSTRAP           = "setting__bootstrap";
-  private static final String PREFKEY_ROOM_SELECTED       = "roomSelected";
-  private static final String PREFKEY_HOLD_SECONDS        = "setting__hold_seconds";
-  private static final String PREFKEY_LIGHT_ALGO          = "algo_light";
-  private static final String PREFKEY_IS_KIOSK            = "is_kiosk";
-  private static final String PREFKEY_IS_TABLET           = "is_tablet";
-  private static final String PREFKEY_FCM_TOKEN           = "fcm_token";
-  private static final String PREFKEY_TO_IGNORE           = "to_ignore";
-  private static final String PREFKEY_IS_IMAGE_DOWNLOADED = "is_image_downloaded";
-  private static final String PREFKEY_IS_IMAGE_LAN        = "is_image_lan";
+  private static final String PREFKEY_RES_FETCHED         = "core_setting__res_fetched";
+  private static final String PREFKEY_HTTP_HOST           = "core_setting__http_host";
+  private static final String PREFKEY_HTTP_PORT           = "core_setting__http_port";
+  private static final String PREFKEY_HTTP_SSL            = "core_setting__http_ssl";
+  private static final String PREFKEY_USERNAME            = "core_setting__username";
+  private static final String PREFKEY_PASSWORD            = "core_setting__password";
+  private static final String PREFKEY_ASSET_ROOT          = "core_setting__assets";
+  private static final String PREFKEY_BOOTSTRAP           = "core_setting__bootstrap";
+  private static final String PREFKEY_ROOM_SELECTED       = "core_roomSelected";
+  private static final String PREFKEY_HOLD_SECONDS        = "core_setting__hold_seconds";
+  private static final String PREFKEY_LIGHT_ALGO          = "core_algo_light";
+  private static final String PREFKEY_IS_KIOSK            = "core_is_kiosk";
+  private static final String PREFKEY_IS_TABLET           = "core_is_tablet";
+  private static final String PREFKEY_FCM_TOKEN           = "core_fcm_token";
+  private static final String PREFKEY_TO_IGNORE           = "core_to_ignore";
+  private static final String PREFKEY_IS_IMAGE_DOWNLOADED = "core_is_image_downloaded";
+  private static final String PREFKEY_IS_IMAGE_LAN        = "core_is_image_lan";
 
   private static AvarioCoreConfig instance = null;
 
@@ -66,7 +66,9 @@ public class AvarioCoreConfig {
    * @return instance of the APIClient singleton
    */
   public static AvarioCoreConfig getInstance(Context context) {
-    if (AvarioCoreConfig.instance == null) { AvarioCoreConfig.instance = new AvarioCoreConfig(context); }
+    if (AvarioCoreConfig.instance == null) {
+      AvarioCoreConfig.instance = new AvarioCoreConfig(context);
+    }
 
     return AvarioCoreConfig.instance;
   }
